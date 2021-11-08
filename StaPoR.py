@@ -59,6 +59,10 @@ class MainForm(QMainWindow):
             os.remove(f'{path}/db/{name}.db')
 
     def export_in_csv(self):
+        name = QFileDialog.getSaveFileName(self, 'Save File')
+        if not name[0]:
+            return
+        path = name[0] + '.csv'
         x = self.data.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
         x = [i[0] for i in x]
         del x[x.index('journal')]
@@ -79,7 +83,7 @@ class MainForm(QMainWindow):
             content = [list(i) for i in content]
             pupils = self.data.cursor().execute(f'SELECT title FROM pupils').fetchall()
             pupils = [i[0] for i in pupils]
-            with open('C:/export_file.csv', 'w', newline='') as file:
+            with open(path, 'w', newline='', encoding='utf-8') as file:
                 filewriter = csv.writer(file, delimiter=';')
                 filewriter.writerow(header)
                 for i in range(len(content)):
@@ -574,8 +578,20 @@ class NewTable(QDialog):
         self.tableWidget.clear()
         self.header = ['ФИО', 'Оценка']
         self.db = sqlite3.connect(f'db/{form.comboBox_3.currentText()}.db')
-        self.var = 0 if self.lineEdit_2.text() == '0' or self.lineEdit_2.text() == '1' else 1
-        self.num = int(self.lineEdit_3.text())
+        if self.lineEdit_2.text().isdigit():
+            self.var = 0 if self.lineEdit_2.text() == '0' or self.lineEdit_2.text() == '1' else 1
+        else:
+            self.progress.setText('Ошибка: неправильно указано количество вариантов')
+            self.progress.setStyleSheet('color: red')
+            self.progress.adjustSize()
+            return
+        if self.lineEdit_3.text().isdigit():
+            self.num = int(self.lineEdit_3.text())
+        else:
+            self.progress.setText('Ошибка: неправильно указано количество заданий')
+            self.progress.setStyleSheet('color: red')
+            self.progress.adjustSize()
+            return
         if self.var:
             self.header.append('Вариант')
         names = self.db.cursor().execute("SELECT title FROM pupils").fetchall()
