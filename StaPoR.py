@@ -654,7 +654,7 @@ class NewTable(QDialog):
             extra = sqlite_connection.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
             extra = [i[0] for i in extra]
             if self.lineEdit.text() in extra:
-                raise ValueError
+                raise IndexError
             sqlite_create_table_query = f"""CREATE TABLE {self.lineEdit.text()} (
         id INT PRIMARY KEY,
         ФИО INT REFERENCES pupils (id),"""
@@ -683,11 +683,19 @@ class NewTable(QDialog):
             self.progress.setText('Ошибка: ошибка в заполнении таблицы')
             self.progress.setStyleSheet('color: red')
             self.progress.adjustSize()
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
             return
         except ValueError:
+            self.progress.setText('Ошибка: ошибка в заполнении таблицы')
+            self.progress.setStyleSheet('color: red')
+            self.progress.adjustSize()
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
+            return
+        except IndexError:
             self.progress.setText('Ошибка: такая таблица уже существует')
             self.progress.setStyleSheet('color: red')
             self.progress.adjustSize()
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
             return
 
         x = cursor.execute(f"PRAGMA table_info(journal)").fetchall()
