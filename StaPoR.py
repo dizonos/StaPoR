@@ -537,9 +537,10 @@ class ShowStat(QWidget):
         self.label.setPixmap(QPixmap(f'pict/{pict}'))
         if args[-1] == 'figure.jpg':
             self.setWindowTitle(f'Успеваемость: {args[2]}')
+            line = [(works[i], num[i]) for i in range(len(works))]
+            num = [i for i in filter(lambda x: x >= 0, num)]
             bad = min(num)
             good = max(num)
-            line = [(works[i], num[i]) for i in range(len(works))]
             worst = [i[0] for i in filter(lambda x: x[1] == bad, line)]
             best = [i[0] for i in filter(lambda x: x[1] == good, line)]
             self.worst = QLabel(self)
@@ -573,7 +574,7 @@ class ShowStat(QWidget):
                 x += self.label1.width() + 20
             sqlite_connection.close()
         elif args[-1] == 'pie1.jpg':
-            self.setWindowTitle(f'Балл за работу {form.comboBox_2.currentText()}: {args[2]}')
+            self.setWindowTitle(f'Баллы за задания в работе {form.comboBox_2.currentText()}: {args[2]}')
             x, y = 20, 510
             for i in range(len(works)):
                 self.label1 = QLabel(self)
