@@ -5,11 +5,11 @@ import openpyxl
 import sqlite3
 import csv
 import shutil
+from PyQt5 import uic
+from os import listdir, getcwd
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QTableWidgetItem, QWidget
 from PyQt5.QtWidgets import QLabel, QFileDialog, QMessageBox, QInputDialog
-from PyQt5 import uic
-from os import listdir, getcwd
 
 
 class MainForm(QMainWindow):
@@ -36,8 +36,15 @@ class MainForm(QMainWindow):
             self.change_class()
 
     def del_class(self):
+        if self.comboBox_3.itemText(0) and not self.comboBox_3.itemText(1):
+            res = QMessageBox.warning(self, self.windowTitle(),
+                                      ("У вас имеется только один класс\n"
+                                       "Вы действительно хотите его удалить?"),
+                                      QMessageBox.Yes | QMessageBox.No)
+            if res == QMessageBox.No:
+                return
         name, ok_pressed = QInputDialog.getText(self, "Удалить класс",
-                                                "Введите его название")
+                                            "Введите его название")
         if ok_pressed:
             path = getcwd()
             c = 0
@@ -98,6 +105,14 @@ class MainForm(QMainWindow):
                                                  "Введите имя ученика")
         if ok_pressed:
             id = self.data.cursor().execute("SELECT id FROM pupils WHERE title = ?", (name, )).fetchall()
+            if not id:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Error")
+                msg.setInformativeText('Такого ученика не существует')
+                msg.setWindowTitle("Error")
+                msg.exec_()
+                return
             id = id[0][0]
             self.comboBox.removeItem(id - 1)
             self.data.cursor().execute('DELETE FROM pupils WHERE id = ?', (id, ))
@@ -222,6 +237,14 @@ class MainForm(QMainWindow):
         if ok_pressed:
             names_col = self.data.cursor().execute(f'PRAGMA table_info(journal)').fetchall()
             names_col = [i[1] for i in names_col]
+            if extra not in names_col:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Error")
+                msg.setInformativeText('Такой работы не существует')
+                msg.setWindowTitle("Error")
+                msg.exec_()
+                return
             self.comboBox_2.removeItem(names_col.index(extra) - 2)
             del names_col[names_col.index(extra)]
             query = 'SELECT '
@@ -254,6 +277,7 @@ class MainForm(QMainWindow):
             if not fname:
                 return
             self.form1 = AddTable(fname)
+            self.form1.progress.hide()
             self.form1.save_table()
         except openpyxl.utils.exceptions.InvalidFileException:
             msg = QMessageBox()
@@ -280,41 +304,13 @@ class MainForm(QMainWindow):
             msg.exec_()
 
     def open_table(self):
-        try:
-            fname = QFileDialog.getOpenFileName(
-                self, 'Выбрать таблицу', '',
-                'Таблица (*.xlsx);')[0]
-            if not fname:
-                return
-            self.form1 = AddTable(fname)
-            self.form1.show()
-        except openpyxl.utils.exceptions.InvalidFileException:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setText("Error")
-            msg.setInformativeText('Неверный формат')
-            msg.setWindowTitle("Error")
-            self.data.cursor().execute(f'DROP TABLE IF EXISTS {self.form1.lineEdit.text()}')
-            msg.exec_()
-        except sqlite3.OperationalError:
-            self.form1.progress.setText('Ошибка: в заполнении таблицы')
-            self.form1.progress.setStyleSheet('color: red')
-            self.form1.progress.adjustSize()
-            self.data.cursor().execute(f'DROP TABLE IF EXISTS {self.form1.lineEdit.text()}')
+        fname = QFileDialog.getOpenFileName(
+            self, 'Выбрать таблицу', '',
+            'Таблица (*.xlsx);')[0]
+        if not fname:
             return
-        except ValueError:
-            self.form1.progress.setText('Ошибка: такая таблица уже существует')
-            self.form1.progress.setStyleSheet('color: red')
-            self.form1.progress.adjustSize()
-            self.data.cursor().execute(f'DROP TABLE IF EXISTS {self.form1.lineEdit.text()}')
-            return
-        except IndexError:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setText("Error")
-            msg.setInformativeText('Неверно заполнена таблица')
-            msg.setWindowTitle("Error")
-            msg.exec_()
+        self.form1 = AddTable(fname)
+        self.form1.show()
 
     def main_table(self):
         header = self.data.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
@@ -372,10 +368,8 @@ class MainForm(QMainWindow):
             msg.exec_()
             return
         name = self.data.cursor().execute(f"SELECT id FROM pupils WHERE title = '{name}'").fetchall()
-        x = self.data.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
-        x = [i[0] for i in x]
-        del x[x.index('journal')]
-        del x[x.index('pupils')]
+        x = self.data.cursor().execute("pragma table_info(journal)").fetchall()
+        x = [i[1] for i in x[2:]]
         y = self.data.cursor().execute("SELECT * FROM journal WHERE ФИО = ?", (name[0][0],)).fetchall()
         y = list(y[0])[2:]
         fig, ax = plt.subplots()
@@ -420,7 +414,17 @@ class AddTable(QWidget):
         self.tableWidget.clear()
         self.tableWidget.setColumnCount(len(self.header))
         if 'ФИО' not in self.header or 'Оценка' not in self.header:
-            raise IndexError
+            if self.progress.isHidden():
+                raise IndexError
+            else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Error")
+                msg.setInformativeText('Неверно заполнена таблица')
+                msg.setWindowTitle("Error")
+                msg.exec_()
+                self.hide()
+                return
         self.tableWidget.setRowCount(0)
         self.tableWidget.setHorizontalHeaderLabels(self.header)
         for i in range(worksheet.max_row - 1):
@@ -430,41 +434,69 @@ class AddTable(QWidget):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(elem)))
 
     def save_table(self):
-        sqlite_connection = sqlite3.connect(f'db/{form.comboBox_3.currentText()}.db')
-        extra = sqlite_connection.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
-        extra = [i[0] for i in extra]
-        if self.lineEdit.text() in extra:
-            raise ValueError
-        sqlite_create_table_query = f"""CREATE TABLE {self.lineEdit.text()} (
-    id INT PRIMARY KEY,
-    ФИО INT REFERENCES pupils (id)"""
-        for i in self.header[1:]:
-            sqlite_create_table_query += f",\n\t{i} INT"
-        sqlite_create_table_query += '\n);'
-        cursor = sqlite_connection.cursor()
-        cursor.execute(sqlite_create_table_query)
-        sqlite_connection.commit()
-        for i in range(self.tableWidget.rowCount()):
+        try:
+            sqlite_connection = sqlite3.connect(f'db/{form.comboBox_3.currentText()}.db')
+            extra = sqlite_connection.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+            extra = [i[0] for i in extra]
+            if self.lineEdit.text() in extra:
+                raise ValueError
+            sqlite_create_table_query = f"""CREATE TABLE {self.lineEdit.text()} (
+        id INT PRIMARY KEY,
+        ФИО INT REFERENCES pupils (id)"""
+            for i in self.header[1:]:
+                stroka = 'ᅠ'.join(_ for _ in i.split(' '))
+                sqlite_create_table_query += f",\n\t{stroka} INT"
+            sqlite_create_table_query += '\n);'
+            cursor = sqlite_connection.cursor()
+            cursor.execute(sqlite_create_table_query)
             sqlite_connection.commit()
-            data = [i + 1]
-            for j in range(len(self.header)):
-                if j == 0:
-                    name = self.tableWidget.item(i, 0).text()
-                    name = cursor.execute(f"SELECT id FROM pupils WHERE title = '{name}'").fetchall()
-                    if not name:
-                        continue
-                    data.append(name[0][0])
-                else:
-                    if not name:
-                        continue
-                    data.append(int(self.tableWidget.item(i, j).text()))
-            if len(data) > 1:
-                stroka = "INSERT INTO "
-                stroka += self.lineEdit.text() + " VALUES(?, "
-                stroka += ', '.join('?' for _ in range(len(self.header)))
-                stroka += ')'
-                cursor.execute(stroka, data)
+            for i in range(self.tableWidget.rowCount()):
                 sqlite_connection.commit()
+                data = [i + 1]
+                for j in range(len(self.header)):
+                    if j == 0:
+                        name = self.tableWidget.item(i, 0).text()
+                        name = cursor.execute(f"SELECT id FROM pupils WHERE title = '{name}'").fetchall()
+                        if not name:
+                            continue
+                        data.append(name[0][0])
+                    else:
+                        if not name:
+                            continue
+                        data.append(int(self.tableWidget.item(i, j).text()))
+                if len(data) > 1:
+                    stroka = "INSERT INTO "
+                    stroka += self.lineEdit.text() + " VALUES(?, "
+                    stroka += ', '.join('?' for _ in range(len(self.header)))
+                    stroka += ')'
+                    cursor.execute(stroka, data)
+                    sqlite_connection.commit()
+        except openpyxl.utils.exceptions.InvalidFileException:
+            if self.progress.isHidden():
+                raise openpyxl.utils.exceptions.InvalidFileException
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Error")
+            msg.setInformativeText('Неверный формат')
+            msg.setWindowTitle("Error")
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
+            msg.exec_()
+        except sqlite3.OperationalError:
+            if self.progress.isHidden():
+                raise sqlite3.OperationalError
+            self.progress.setText('Ошибка: в заполнении таблицы')
+            self.progress.setStyleSheet('color: red')
+            self.progress.adjustSize()
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
+            return
+        except ValueError:
+            if self.progress.isHidden():
+                raise ValueError
+            self.progress.setText('Ошибка: такая таблица уже существует')
+            self.progress.setStyleSheet('color: red')
+            self.progress.adjustSize()
+            sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
+            return
 
         if ' ' in self.lineEdit.text():
             self.self.lineEdit.setText('⠀'.join(i for i in self.lineEdit.text().split()))
@@ -505,20 +537,11 @@ class ShowStat(QWidget):
         self.label.setPixmap(QPixmap(f'pict/{pict}'))
         if args[-1] == 'figure.jpg':
             self.setWindowTitle(f'Успеваемость: {args[2]}')
-            worst = []
-            ex = min(num)
-            for i in sorted(num):
-                if ex == i:
-                    worst.append(works[num.index(i)])
-                else:
-                    break
-            best = []
-            ex = max(num)
-            for i in sorted(num, reverse=True):
-                if ex == i:
-                    best.append(works[num.index(i)])
-                else:
-                    break
+            bad = min(num)
+            good = max(num)
+            line = [(works[i], num[i]) for i in range(len(works))]
+            worst = [i[0] for i in filter(lambda x: x[1] == bad, line)]
+            best = [i[0] for i in filter(lambda x: x[1] == good, line)]
             self.worst = QLabel(self)
             stroka = '\n'.join(i for i in worst)
             if len(worst) > 1:
@@ -602,7 +625,7 @@ class NewTable(QDialog):
                 zadaniya.append(f'Задание⠀{i}')
         else:
             for i in self.plainTextEdit.toPlainText().split(','):
-                zadaniya.append('⠀'.join(_ for _ in i.strip(' ')))
+                zadaniya.append(i)
         if len(zadaniya) != self.num:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
@@ -657,7 +680,7 @@ class NewTable(QDialog):
                 cursor.execute(stroka, data)
                 sqlite_connection.commit()
         except sqlite3.OperationalError:
-            self.progress.setText('Ошибка: в заполнении таблицы')
+            self.progress.setText('Ошибка: ошибка в заполнении таблицы')
             self.progress.setStyleSheet('color: red')
             self.progress.adjustSize()
             return
