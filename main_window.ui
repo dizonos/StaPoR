@@ -11,52 +11,54 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>StaPoR</string>
+   <string>Work Statistic</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QPushButton" name="new_table">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>40</y>
-      <width>111</width>
-      <height>31</height>
+      <y>20</y>
+      <width>121</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Создать таблицу</string>
+     <string>Внести результаты
+вручную</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_3">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>90</y>
-      <width>111</width>
-      <height>31</height>
+      <y>80</y>
+      <width>121</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Открыть таблицу</string>
+     <string>Открыть и изменить
+результаты</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_4">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>190</y>
-      <width>111</width>
-      <height>31</height>
+      <y>200</y>
+      <width>121</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Удалить таблицу</string>
+     <string>Удалить результаты</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_7">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>450</x>
       <y>120</y>
       <width>111</width>
       <height>41</height>
@@ -71,7 +73,7 @@
    <widget class="QPushButton" name="pushButton_5">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>450</x>
       <y>60</y>
       <width>111</width>
       <height>41</height>
@@ -88,7 +90,7 @@
    <widget class="QComboBox" name="comboBox">
     <property name="geometry">
      <rect>
-      <x>190</x>
+      <x>220</x>
       <y>20</y>
       <width>151</width>
       <height>22</height>
@@ -98,7 +100,7 @@
    <widget class="QPushButton" name="pushButton_9">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>450</x>
       <y>180</y>
       <width>111</width>
       <height>41</height>
@@ -112,7 +114,7 @@
    <widget class="QComboBox" name="comboBox_2">
     <property name="geometry">
      <rect>
-      <x>400</x>
+      <x>430</x>
       <y>20</y>
       <width>151</width>
       <height>22</height>
@@ -122,7 +124,7 @@
    <widget class="QPushButton" name="show_progress">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>240</x>
       <y>60</y>
       <width>111</width>
       <height>41</height>
@@ -148,18 +150,18 @@
      <rect>
       <x>20</x>
       <y>140</y>
-      <width>111</width>
-      <height>31</height>
+      <width>121</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Добавить таблицу</string>
+     <string>Внести результаты</string>
     </property>
    </widget>
    <widget class="QComboBox" name="comboBox_3">
     <property name="geometry">
      <rect>
-      <x>610</x>
+      <x>640</x>
       <y>20</y>
       <width>151</width>
       <height>22</height>
@@ -169,7 +171,7 @@
    <widget class="QPushButton" name="pushButton_2">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>240</x>
       <y>120</y>
       <width>111</width>
       <height>41</height>
@@ -183,7 +185,7 @@
    <widget class="QPushButton" name="pushButton_6">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>660</x>
       <y>60</y>
       <width>111</width>
       <height>41</height>
@@ -197,7 +199,7 @@
    <widget class="QPushButton" name="pushButton_8">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>240</x>
       <y>180</y>
       <width>111</width>
       <height>41</height>
@@ -224,7 +226,7 @@
    <widget class="QPushButton" name="pushButton_11">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>660</x>
       <y>120</y>
       <width>111</width>
       <height>41</height>

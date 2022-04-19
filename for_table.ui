@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>677</width>
-    <height>618</height>
+    <width>682</width>
+    <height>661</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,17 +40,23 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>160</y>
-     <width>671</width>
+     <y>200</y>
+     <width>661</width>
      <height>411</height>
     </rect>
+   </property>
+   <property name="rowCount">
+    <number>0</number>
+   </property>
+   <property name="columnCount">
+    <number>0</number>
    </property>
   </widget>
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
     <rect>
-     <x>440</x>
-     <y>580</y>
+     <x>490</x>
+     <y>620</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -62,8 +68,8 @@
   <widget class="QPushButton" name="pushButton_2">
    <property name="geometry">
     <rect>
-     <x>540</x>
-     <y>580</y>
+     <x>590</x>
+     <y>620</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -135,7 +141,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>100</y>
+     <y>140</y>
      <width>181</width>
      <height>16</height>
     </rect>
@@ -148,7 +154,7 @@
    <property name="geometry">
     <rect>
      <x>190</x>
-     <y>100</y>
+     <y>140</y>
      <width>481</width>
      <height>41</height>
     </rect>
@@ -157,8 +163,8 @@
   <widget class="QLabel" name="progress">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>580</y>
+     <x>20</x>
+     <y>620</y>
      <width>151</width>
      <height>21</height>
     </rect>
@@ -173,6 +179,45 @@
    </property>
    <property name="text">
     <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_4">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>620</y>
+     <width>111</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Рассчитать оценку</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>100</y>
+     <width>101</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Максимальный балл</string>
+   </property>
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit_4">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>100</y>
+     <width>113</width>
+     <height>20</height>
+    </rect>
    </property>
   </widget>
  </widget>
