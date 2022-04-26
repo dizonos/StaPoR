@@ -117,22 +117,22 @@ class MainForm(QMainWindow):
             self.comboBox.removeItem(id - 1)
             self.data.cursor().execute('DELETE FROM pupils WHERE id = ?', (id, ))
             self.data.commit()
-            self.data.cursor().execute("""
+            self.data.cursor().execute(f"""
             UPDATE pupils
             SET id = id - 1
-            WHERE id > 3""")
+            WHERE id > {id}""")
             self.data.commit()
-            self.data.cursor().execute('DELETE FROM journal WHERE id = ?', (id, ))
+            self.data.cursor().execute('DELETE FROM journal WHERE ФИО = ?', (id, ))
             self.data.commit()
-            self.data.cursor().execute("""
+            self.data.cursor().execute(f"""
                         UPDATE journal
                         SET ФИО = ФИО - 1
-                        WHERE id > 3""")
+                        WHERE id > {id}""")
             self.data.commit()
-            self.data.cursor().execute("""
+            self.data.cursor().execute(f"""
                         UPDATE journal
                         SET id = id - 1
-                        WHERE id > 3""")
+                        WHERE id > {id}""")
             self.data.commit()
             self.main_table()
 
@@ -336,7 +336,10 @@ class MainForm(QMainWindow):
                 if j == 0:
                     self.tableWidget.setItem(i, j, QTableWidgetItem(str(name[i][0])))
                 else:
-                    self.tableWidget.setItem(i, j,  QTableWidgetItem(str(elem)))
+                    if elem == -1:
+                        self.tableWidget.setItem(i, j, QTableWidgetItem('н'))
+                    else:
+                        self.tableWidget.setItem(i, j,  QTableWidgetItem(str(elem)))
 
     def stat_for_work(self):
         name = self.comboBox_2.currentText()
@@ -617,7 +620,8 @@ class NewTable(QDialog):
         grade = int(self.lineEdit_4.text())
         for i in range(self.tableWidget.rowCount()):
             n = 0
-            for j in range(2, self.tableWidget.columnCount()):
+            start = 3 if self.var else 2
+            for j in range(start, self.tableWidget.columnCount()):
                 n += int(self.tableWidget.item(i, j).text())
             if n > grade * 0.85:
                 self.tableWidget.setItem(i, 1, QTableWidgetItem(str(5)))
@@ -712,7 +716,10 @@ class NewTable(QDialog):
                     if j == 0:
                         data.append(i + 1)
                     else:
-                        data.append(int(self.tableWidget.item(i, j).text()))
+                        if self.tableWidget.item(i, j).text() == 'н':
+                            data.append(-1)
+                        else:
+                            data.append(int(self.tableWidget.item(i, j).text()))
                 stroka = "INSERT INTO "
                 stroka += self.lineEdit.text() + " VALUES(?, "
                 stroka += ', '.join('?' for _ in range(len(self.header)))
@@ -746,7 +753,17 @@ class NewTable(QDialog):
             cursor = sqlite_connection.cursor()
             for i in range(self.tableWidget.rowCount()):
                 name = self.lineEdit.text()
-                n = int(self.tableWidget.item(i, 1).text())
+                n = self.tableWidget.item(i, 1).text()
+                if n == 'н':
+                    n = -1
+                elif n.isdigit():
+                    n = int(n)
+                else:
+                    self.progress.setText('Ошибка: ошибка в заполнении таблицы')
+                    self.progress.setStyleSheet('color: red')
+                    self.progress.adjustSize()
+                    sqlite_connection.cursor().execute(f'DROP TABLE IF EXISTS {self.lineEdit.text()}')
+                    return
                 cursor.execute(f"""UPDATE journal
                                     SET {name} = ?
                                     WHERE id = ?""", (n, i + 1))
