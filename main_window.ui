@@ -108,7 +108,7 @@
     </property>
     <property name="text">
      <string>Экспортировать 
-в .csv</string>
+работу</string>
     </property>
    </widget>
    <widget class="QComboBox" name="comboBox_2">

@@ -2,6 +2,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import openpyxl
+from openpyxl import Workbook
 import sqlite3
 import csv
 import shutil
@@ -66,10 +67,9 @@ class MainForm(QMainWindow):
             os.remove(f'{path}/db/{name}.db')
 
     def export_in_csv(self):
-        name = QFileDialog.getSaveFileName(self, 'Save File')
-        if not name[0]:
+        file = QFileDialog.getSaveFileName(self, 'Save File', '', 'Таблица excel (*.xlsx);;Таблица csv (*.csv)')
+        if not file[0]:
             return
-        path = name[0] + '.csv'
         x = self.data.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
         x = [i[0] for i in x]
         del x[x.index('journal')]
@@ -80,25 +80,48 @@ class MainForm(QMainWindow):
             self, "Выберите таблицу", "Какую таблицу экспортировать?",
             spisok, 1, False)
         if ok_pressed:
-            if name == 'Журнал':
-                name = 'journal'
-            header = self.data.cursor().execute(f'pragma table_info({name})').fetchall()
-            header = [i[1] for i in header]
-            del header[0]
-            header.insert(0, '№')
-            content = self.data.cursor().execute(f'SELECT * FROM {name}').fetchall()
-            content = [list(i) for i in content]
-            pupils = self.data.cursor().execute(f'SELECT title FROM pupils').fetchall()
-            pupils = [i[0] for i in pupils]
-            with open(path, 'w', newline='', encoding='utf-8') as file:
-                filewriter = csv.writer(file, delimiter=';')
-                filewriter.writerow(header)
+            if file[1] == 'Таблица csv (*.csv)':
+                path = file[0] + '.csv'
+                if name == 'Журнал':
+                    name = 'journal'
+                header = self.data.cursor().execute(f'pragma table_info({name})').fetchall()
+                header = [i[1] for i in header]
+                del header[0]
+                header.insert(0, '№')
+                content = self.data.cursor().execute(f'SELECT * FROM {name}').fetchall()
+                content = [list(i) for i in content]
+                pupils = self.data.cursor().execute(f'SELECT title FROM pupils').fetchall()
+                pupils = [i[0] for i in pupils]
+                with open(path, 'w', newline='', encoding='utf-8') as file:
+                    filewriter = csv.writer(file, delimiter=';')
+                    filewriter.writerow(header)
+                    for i in range(len(content)):
+                        row = content[i]
+                        row.insert(2, pupils[row[1] - 1])
+                        del row[1]
+                        filewriter.writerow(row)
+                    file.close()
+            else:
+                wb = Workbook(write_only=True)
+                ws = wb.create_sheet(name)
+                if name == 'Журнал':
+                    name = 'journal'
+                header = self.data.cursor().execute(f'pragma table_info({name})').fetchall()
+                header = [i[1] for i in header]
+                del header[0]
+                header.insert(0, '№')
+                content = self.data.cursor().execute(f'SELECT * FROM {name}').fetchall()
+                content = [list(i) for i in content]
+                pupils = self.data.cursor().execute(f'SELECT title FROM pupils').fetchall()
+                pupils = [i[0] for i in pupils]
+                ws.append(header)
                 for i in range(len(content)):
                     row = content[i]
                     row.insert(2, pupils[row[1] - 1])
                     del row[1]
-                    filewriter.writerow(row)
-                file.close()
+                    ws.append(row)
+                wb.save(f"{file[0]}")
+
 
     def del_person(self):
         name, ok_pressed = QInputDialog.getText(self, "Удалить ученика",
