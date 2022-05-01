@@ -122,7 +122,6 @@ class MainForm(QMainWindow):
                     ws.append(row)
                 wb.save(f"{file[0]}")
 
-
     def del_person(self):
         name, ok_pressed = QInputDialog.getText(self, "Удалить ученика",
                                                  "Введите имя ученика")
