@@ -426,6 +426,8 @@ class AddTable(QWidget):
         self.label_2.hide()
         self.label_3.hide()
         self.label_4.hide()
+        self.label_5.hide()
+        self.lineEdit_4.hide()
         self.lineEdit_2.hide()
         self.lineEdit_3.hide()
         self.plainTextEdit.hide()
@@ -441,7 +443,7 @@ class AddTable(QWidget):
 
     def show_table(self):
         worksheet = self.workbook.worksheets[0]
-        self.header = [i.value for i in list(worksheet.rows)[0]]
+        self.header = [i.value for i in list(worksheet.rows)[0][1:]]
         self.tableWidget.clear()
         self.tableWidget.setColumnCount(len(self.header))
         if 'ФИО' not in self.header or 'Оценка' not in self.header:
@@ -460,7 +462,7 @@ class AddTable(QWidget):
         self.tableWidget.setHorizontalHeaderLabels(self.header)
         for i in range(worksheet.max_row - 1):
             self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
-            row = [i.value for i in list(worksheet.rows)[i + 1]]
+            row = [i.value for i in list(worksheet.rows)[i + 1][1:]]
             for j, elem in enumerate(row):
                 self.tableWidget.setItem(i, j, QTableWidgetItem(str(elem)))
 
@@ -471,6 +473,7 @@ class AddTable(QWidget):
             extra = [i[0] for i in extra]
             if self.lineEdit.text() in extra:
                 raise ValueError
+            self.lineEdit.setText('⠀'.join(_ for _ in self.lineEdit.text().split(' ')))
             sqlite_create_table_query = f"""CREATE TABLE {self.lineEdit.text()} (
         id INT PRIMARY KEY,
         ФИО INT REFERENCES pupils (id)"""
