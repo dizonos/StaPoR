@@ -682,23 +682,23 @@ class NewTable(QDialog):
             self.header.append('Вариант')
         names = self.db.cursor().execute("SELECT title FROM pupils").fetchall()
         self.row = 2 + self.var + self.num
-        zadaniya = []
-        if not self.plainTextEdit.toPlainText():
-            for i in range(1, self.num + 1):
-                zadaniya.append(f'Задание⠀{i}')
-        else:
-            for i in self.plainTextEdit.toPlainText().split(','):
-                zadaniya.append(i)
-        if len(zadaniya) != self.num:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setText("Внимание")
-            msg.setInformativeText('Количество именовонных заданий не соответствует количстыу заданий')
-            msg.setWindowTitle("ВНИМАНИЕ")
-            msg.exec_()
-            self.tableWidget.clear()
-            return
-        self.header += zadaniya
+        # zadaniya = []
+        # if not self.plainTextEdit.toPlainText():
+        #     for i in range(1, self.num + 1):
+        #         zadaniya.append(f'Задание⠀{i}')
+        # else:
+        #     for i in self.plainTextEdit.toPlainText().split(','):
+        #         zadaniya.append(i)
+        # if len(zadaniya) != self.num:
+        #     msg = QMessageBox()
+        #     msg.setIcon(QMessageBox.Warning)
+        #     msg.setText("Внимание")
+        #     msg.setInformativeText('Количество именовонных заданий не соответствует количстыу заданий')
+        #     msg.setWindowTitle("ВНИМАНИЕ")
+        #     msg.exec_()
+        #     self.tableWidget.clear()
+        #     return
+        # self.header += zadaniya
         self.tableWidget.setColumnCount(self.row)
         self.tableWidget.setRowCount(0)
         self.tableWidget.setHorizontalHeaderLabels(self.header)
