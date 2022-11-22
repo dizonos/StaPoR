@@ -3,18 +3,50 @@ from openpyxl import Workbook
 import sys
 import matplotlib.pyplot as plt
 from data import db_session
-import sqlite3
+import docx
+import os
 import csv
 import shutil
 from PyQt5 import uic
-from os import listdir, getcwd
-from PyQt5.QtGui import QPixmap
+from cryptography.fernet import Fernet
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QTableWidgetItem, QWidget
-from PyQt5.QtWidgets import QLabel, QFileDialog, QMessageBox, QInputDialog
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QInputDialog, QPlainTextEdit
 from data.pupils import Pupil
 from data.form import Class
 from data.journal import Journal
 from data.work import Work
+
+
+def write_key():
+    key = Fernet.generate_key()
+    return key
+
+
+def encrypt(filename, key):
+    f = Fernet(key)
+    if filename.split('.')[-1] == 'txt':
+        with open(filename, 'rb') as file:
+            file_data = file.read()
+    else:
+        doc = docx.Document(filename)
+        all_paras = doc.paragraphs
+        file_data = '\n'.join(i.text for i in all_paras).encode('utf-8')
+        os.remove(filename)
+        filename = filename.split('.')[0] + '.txt'
+    encrypted_data = f.encrypt(file_data)
+    with open(f'{filename}', 'wb') as file:
+        file.write(encrypted_data)
+    file.close()
+
+
+def decrypt(filename, key):
+    f = Fernet(key)
+    if filename.split('.')[-1] == 'txt':
+        with open(filename, 'rb') as file:
+            encrypted_data = file.read()
+        decrypted_data = f.decrypt(encrypted_data)
+        file.close()
+    return decrypted_data.decode('utf-8')
 
 
 def update_journal():
@@ -49,6 +81,22 @@ def update_form():
         db_sess.commit()
 
 
+class ShowWork(QWidget):
+    def __init__(self, res, name, work):
+        super().__init__()
+        self.work = work
+        self.title = name
+        self.initUI(res)
+
+    def initUI(self, res):
+        self.setGeometry(300, 300, 700, 600)
+        self.setWindowTitle(self.title)
+        self.text = QPlainTextEdit(self)
+        self.text.resize(661, 481)
+        self.text.move(20, 10)
+        self.text.setPlainText(res)
+
+
 class MainForm(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -73,6 +121,16 @@ class MainForm(QMainWindow):
         self.pushButton_5.clicked.connect(self.diagrams)
         self.pushButton_10.clicked.connect(self.export)
         self.main_table()
+
+    def show_work(self, name):
+        work = db_sess.query(Work).filter(Work.title == name).first()
+        self.file_name = work.file_name
+        self.key = work.key
+        if not self.file_name or not self.key:
+            return -1
+        res = decrypt(self.file_name, self.key)
+        self.form2 = ShowWork(res, work.title, work)
+        return self.form2
 
     def export(self):
         file = QFileDialog.getSaveFileName(self, 'Save File', '', 'Таблица excel (*.xlsx);;Таблица csv (*.csv)')
@@ -172,6 +230,7 @@ class MainForm(QMainWindow):
                 if mark != -1:
                     works_with_no_n.append(i.title)
             task_name, ok_pressed = QInputDialog.getItem(self, 'Выбор работы', 'Выберите работу', works_with_no_n)
+            form2 = self.show_work(task_name)
             work_id = db_sess.query(Work).filter(Work.title == task_name).first().id
             if not ok_pressed:
                 return
@@ -201,6 +260,7 @@ class MainForm(QMainWindow):
                 if mark != -1:
                     works_with_no_n.append(i.title)
             task_name, ok_pressed = QInputDialog.getItem(self, 'Выбор работы', 'Выберите работу', works_with_no_n)
+            form2 = self.show_work(task_name)
             if not ok_pressed:
                 return
             work_id = db_sess.query(Work).filter(Work.title == task_name).first().id
@@ -220,6 +280,9 @@ class MainForm(QMainWindow):
                 scores_tasks.append('\n'.join(i for i in scores_names[i]))
             fig, ax = plt.subplots()
             ax.pie(num_scores, labels=scores_tasks)
+        if (self.comboBox_2.currentText() == 'Успеваемость за работу' or
+            self.comboBox_2.currentText() == 'Баллы за задания') and form2 != -1:
+            form2.show()
         plt.show()
         file = QFileDialog.getSaveFileName(self, 'Save File', '', 'Файл c отчётом(*.txt)')
         if not file[0] or self.comboBox_2.currentText() == 'Количество пропусков':
@@ -452,6 +515,16 @@ class AddTable(QWidget):
         self.pushButton.clicked.connect(self.save_table)
         self.pushButton_2.clicked.connect(self.close)
         self.show_table()
+        self.pushButton_5.clicked.connect(self.add_work)
+
+    def add_work(self):
+        file = QFileDialog.getOpenFileName(self, 'Выберите Файл с работой', '', "Text files (*.txt);;Word files (*.docx)")
+        shutil.copy2(file[0], 'works/')
+        self.file_name = 'works/' + file[0].split('/')[-1]
+        self.key = write_key()
+        encrypt(self.file_name, self.key)
+        self.file_name = self.file_name.split('.')[0] + '.txt'
+        print(self.file_name)
 
     def close(self):
         self.hide()
@@ -486,7 +559,9 @@ class AddTable(QWidget):
         work_title = self.lineEdit.text()
         work = Work(
             title=work_title,
-            form=classes.id
+            form=classes.id,
+            file_name=self.file_name,
+            key=self.key
         )
         db_sess.add(work)
         db_sess.commit()
@@ -545,10 +620,22 @@ class NewTable(QDialog):
         uic.loadUi('for_table.ui', self)
         self.setWindowTitle(args[0])
         self.show_table_flag = False
+        self.file_name = ''
+        self.key = ''
         self.pushButton_3.clicked.connect(self.show_table)
         self.pushButton.clicked.connect(self.save_table)
         self.pushButton_2.clicked.connect(self.close)
         self.pushButton_4.clicked.connect(self.calculate_grade)
+        self.pushButton_5.clicked.connect(self.add_work)
+
+    def add_work(self):
+        file = QFileDialog.getOpenFileName(self, 'Выберите Файл с работой', '', "Text files (*.txt);;Word files (*.docx)")
+        shutil.copy2(file[0], 'works/')
+        self.file_name = 'works/' + file[0].split('/')[-1]
+        self.key = write_key()
+        encrypt(self.file_name, self.key)
+        self.file_name = self.file_name.split('.')[0] + '.txt'
+        print(self.file_name)
 
     def show_table(self):
         self.tableWidget.clear()
@@ -622,7 +709,9 @@ class NewTable(QDialog):
         work_title = self.lineEdit.text()
         work = Work(
             title=work_title,
-            form=classes.id
+            form=classes.id,
+            file_name=self.file_name,
+            key=self.key
         )
         db_sess.add(work)
         db_sess.commit()

@@ -8,6 +8,8 @@ class Work(SqlAlchemyBase):
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+    file_name = sqlalchemy.Column(sqlalchemy.String)
+    key = sqlalchemy.Column(sqlalchemy.String)
     form = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('forms.id'))
 
     to_journal1 = orm.relation('Journal', back_populates='from_work')

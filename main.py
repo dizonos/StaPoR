@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QTableWidgetItem
 from PyQt5.QtWidgets import QLabel, QFileDialog, QMessageBox, QInputDialog
 
 
+
 class MainForm(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -415,7 +416,7 @@ class MainForm(QMainWindow):
         self.main_table()
 
     def closeEvent(self, event):
-        self.data.close()
+        self.close()
 
 
 class AddTable(QWidget):
@@ -624,12 +625,14 @@ class NewTable(QDialog):
     def __init__(self, *args):
         super().__init__()
         uic.loadUi('for_table.ui', self)
+        self.way_to_work = ''
         self.setWindowTitle(args[0])
         self.show_table_flag = False
         self.pushButton_3.clicked.connect(self.show_table)
         self.pushButton.clicked.connect(self.save_table)
         self.pushButton_2.clicked.connect(self.close)
         self.pushButton_4.clicked.connect(self.calculate_grade)
+
 
     def calculate_grade(self):
         if not self.show_table_flag:
@@ -682,23 +685,6 @@ class NewTable(QDialog):
             self.header.append('Вариант')
         names = self.db.cursor().execute("SELECT title FROM pupils").fetchall()
         self.row = 2 + self.var + self.num
-        # zadaniya = []
-        # if not self.plainTextEdit.toPlainText():
-        #     for i in range(1, self.num + 1):
-        #         zadaniya.append(f'Задание⠀{i}')
-        # else:
-        #     for i in self.plainTextEdit.toPlainText().split(','):
-        #         zadaniya.append(i)
-        # if len(zadaniya) != self.num:
-        #     msg = QMessageBox()
-        #     msg.setIcon(QMessageBox.Warning)
-        #     msg.setText("Внимание")
-        #     msg.setInformativeText('Количество именовонных заданий не соответствует количстыу заданий')
-        #     msg.setWindowTitle("ВНИМАНИЕ")
-        #     msg.exec_()
-        #     self.tableWidget.clear()
-        #     return
-        # self.header += zadaniya
         self.tableWidget.setColumnCount(self.row)
         self.tableWidget.setRowCount(0)
         self.tableWidget.setHorizontalHeaderLabels(self.header)
