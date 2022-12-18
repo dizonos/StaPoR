@@ -135,6 +135,7 @@ class MainForm(QMainWindow):
         self.pushButton_5.clicked.connect(self.diagrams)
         self.pushButton_10.clicked.connect(self.export)
         self.pushButton_7.clicked.connect(self.change)
+        self.pushButton_12.clicked.connect(self.close)
         self.main_table()
 
     def show_work(self, name):
@@ -347,10 +348,17 @@ class MainForm(QMainWindow):
                         f.write(f'{i[1]}\n')
             elif self.comboBox_2.currentText() == 'Баллы за задания':
                 f.write(f'Баллы {self.comboBox.currentText()} за работу: {task_name}\n')
+                scores_names = dict()
+                for i in range(len(tasks_name)):
+                    if scores_p[i] not in scores_names.keys():
+                        scores_names[scores_p[i]] = [tasks_name[i]]
+                    else:
+                        scores_names[scores_p[i]].append(tasks_name[i])
                 tup_works = [(i, scores_names[i]) for i in scores_names.keys()]
                 tup_works.sort(key=lambda x: x[0])
                 for i in tup_works:
-                    f.write(f'За {i[1][0]} получил/а {i[0]}\n')
+                    tasks = ", ".join(_ for _ in i[1])
+                    f.write(f'За {tasks} получил/а {i[0]}\n')
 
     def del_table(self):
         name, ok_pressed = QInputDialog.getText(self, "Удаление работы",
