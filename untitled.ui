@@ -82,6 +82,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="pushButton_7">
+          <property name="text">
+           <string>Изменить</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_4">
           <property name="enabled">
            <bool>true</bool>
@@ -305,7 +312,7 @@
      <x>0</x>
      <y>0</y>
      <width>921</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>

@@ -17,6 +17,19 @@ from data.journal import Journal
 from data.work import Work
 
 
+def mistake(warning, thing_to_delete=None):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText("Error")
+    msg.setInformativeText(warning)
+    msg.setWindowTitle("Error")
+    msg.exec_()
+    if thing_to_delete:
+        db_sess.delete(thing_to_delete)
+        db_sess.commit()
+    return
+
+
 def write_key():
     key = Fernet.generate_key()
     return key
@@ -110,6 +123,7 @@ class MainForm(QMainWindow):
             pupils = db_sess.query(Pupil).filter(Pupil.form == classes.id).all()
             for i in pupils:
                 self.comboBox.addItem(i.full_name)
+        self.comboBox_3.currentIndexChanged.connect(self.main_table)
         self.pushButton.clicked.connect(self.create_table)
         self.pushButton_2.clicked.connect(self.open_table)
         self.pushButton_3.clicked.connect(self.open_without_interface)
@@ -120,6 +134,7 @@ class MainForm(QMainWindow):
         self.pushButton_4.clicked.connect(self.del_table)
         self.pushButton_5.clicked.connect(self.diagrams)
         self.pushButton_10.clicked.connect(self.export)
+        self.pushButton_7.clicked.connect(self.change)
         self.main_table()
 
     def show_work(self, name):
@@ -207,20 +222,22 @@ class MainForm(QMainWindow):
             lines = db_sess.query(Journal).filter(Journal.full_name == name).all()
             marks = [i.mark for i in lines]
             tasks = ['\n'.join(j for j in db_sess.query(Work).filter(Work.id == i.task_name).first().title.split()) for i in lines]
-            fig, ax = plt.subplots()
-            ax.barh(tasks, marks)
+            print(tasks)
+            plt.axis([0, 5, 0, len(tasks)])
+            plt.barh(tasks, marks)
+            plt.xlabel('Оценка за работу')
+            plt.ylabel('Название работы')
         elif self.comboBox_2.currentText() == 'Количество пропусков':
             classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first().id
             all = db_sess.query(Work).filter(Work.form == classes).all()
-            done = 0
+            wasnt = 0
             for i in all:
-                mark = db_sess.query(Journal).filter(Journal.task_name == i.id, Journal.full_name == name).first().id
+                mark = db_sess.query(Journal).filter(Journal.task_name == i.id, Journal.full_name == name).first().mark
                 if mark == -1:
-                    done += 1
+                    wasnt += 1
             all = len(all)
-            fig, ax = plt.subplots()
-            ax.legend(loc='center right')
-            ax.pie([done, all - done], labels=['Был', "Не был"])
+            print(all, wasnt)
+            plt.pie([all - wasnt, wasnt], autopct='%.2f', labels=['Был', "Не был"])
         elif self.comboBox_2.currentText() == 'Успеваемость за работу':
             classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first().id
             works = db_sess.query(Work).filter(Work.form == classes).all()
@@ -249,8 +266,7 @@ class MainForm(QMainWindow):
             for i in marks_names.keys():
                 marks.append(len(marks_names[i]))
                 names.append('\n'.join(i for i in marks_names[i]))
-            fig, ax = plt.subplots()
-            ax.pie(marks, labels=names)
+            plt.pie(marks, labels=names, autopct='%.2f')
         elif self.comboBox_2.currentText() == 'Баллы за задания':
             classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first().id
             works = db_sess.query(Work).filter(Work.form == classes).all()
@@ -265,25 +281,28 @@ class MainForm(QMainWindow):
                 return
             work_id = db_sess.query(Work).filter(Work.title == task_name).first().id
             work = db_sess.query(Journal).filter(Journal.full_name == name, Journal.task_name == work_id, Journal.pupil_form == classes).first()
-            scores = [int(i) for i in work.score_for_task.split(';')]
-            tasks_name = [f'Задание {i}' for i in range(1, len(scores) + 1)]
-            scores_names = dict()
-            for i in range(len(scores)):
-                if scores[i] not in scores_names.keys():
-                    scores_names[scores[i]] = [f'{tasks_name[i]} ({scores[i]})']
-                else:
-                    scores_names[scores[i]].append(f'{tasks_name[i]} ({scores[i]})')
-            num_scores = list()
-            scores_tasks = list()
-            for i in scores_names.keys():
-                num_scores.append(len(scores_names[i]))
-                scores_tasks.append('\n'.join(i for i in scores_names[i]))
-            fig, ax = plt.subplots()
-            ax.pie(num_scores, labels=scores_tasks)
+            scores_p = [int(i) for i in work.score_for_task.split(';')]
+            works = db_sess.query(Journal).filter(Journal.task_name == work_id, Journal.pupil_form == classes).all()
+            scores_a = list()
+            for i in works:
+                sp = [int(j) for j in i.score_for_task.split(';')]
+                scores_a += sp
+            persent_score = [scores_p[i] / max(scores_a[i::len(scores_p)]) for i in range(len(scores_p))]
+            tasks_name = [f'Задание {i}' for i in range(1, len(scores_p) + 1)]
+            plt.axis([1, len(tasks_name), 0, 1])
+            plt.ylabel('Отношение балла ученика\nк максимальному(по классу)')
+            plt.xlabel('Задания')
+            plt.bar(tasks_name, persent_score)
         if (self.comboBox_2.currentText() == 'Успеваемость за работу' or
             self.comboBox_2.currentText() == 'Баллы за задания') and form2 != -1:
             form2.show()
         plt.show()
+        msgBox = QMessageBox()
+        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msgBox.setText("Создать отчёт?")
+        result = msgBox.exec_()
+        if QMessageBox.No == result:
+            return
         file = QFileDialog.getSaveFileName(self, 'Save File', '', 'Файл c отчётом(*.txt)')
         if not file[0] or self.comboBox_2.currentText() == 'Количество пропусков':
             return
@@ -327,31 +346,32 @@ class MainForm(QMainWindow):
                     for i in best:
                         f.write(f'{i[1]}\n')
             elif self.comboBox_2.currentText() == 'Баллы за задания':
-                f.write(f'Баллы {self.comboBox.currentText()} за работу: {task_name}')
+                f.write(f'Баллы {self.comboBox.currentText()} за работу: {task_name}\n')
                 tup_works = [(i, scores_names[i]) for i in scores_names.keys()]
                 tup_works.sort(key=lambda x: x[0])
                 for i in tup_works:
-                    f.write(f'За {i[1]} получил/а {i[0]}\n')
+                    f.write(f'За {i[1][0]} получил/а {i[0]}\n')
 
     def del_table(self):
         name, ok_pressed = QInputDialog.getText(self, "Удаление работы",
                                                 "Введите название работы")
         if ok_pressed:
-            work = db_sess.query(Work).filter(Work.title == name).first()
+            classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first()
+            work = db_sess.query(Work).filter(Work.title == name, Work.form == classes.id).first()
             if not work:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
-                msg.setText("Error")
-                msg.setInformativeText('Такой работы не существует')
-                msg.setWindowTitle("Error")
-                msg.exec_()
+                mistake('Такой работы не существует')
                 return
-            lines = db_sess.query(Journal).filter(Journal.task_name == work.id).all()
+            lines = db_sess.query(Journal).filter(Journal.task_name == work.id, Journal.pupil_form == classes.id).all()
             for i in lines:
                 db_sess.delete(i)
                 db_sess.commit()
+            n = work.id
             db_sess.delete(work)
             db_sess.commit()
+            lines = db_sess.query(Journal).filter(Journal.task_name > n, Journal.pupil_form == classes.id).all()
+            for i in lines:
+                i.task_name -= 1
+                db_sess.commit()
             update_journal()
             update_works()
             self.main_table()
@@ -373,18 +393,29 @@ class MainForm(QMainWindow):
             form = db_sess.query(Class).filter(Class.form == name).first()
             if form:
                 journal = db_sess.query(Journal).filter(Journal.pupil_form == form.id).all()
-                if len(journal) > 0:
-                    n = journal[0].id - 1
-                    for i in journal:
-                        db_sess.delete(i)
-                        db_sess.commit()
+                for i in journal:
+                    db_sess.delete(i)
+                    db_sess.commit()
                 pupils = db_sess.query(Pupil).filter(Pupil.form == form.id).all()
-                if len(pupils) > 0:
-                    n = pupils[0].id - 1
-                    for i in pupils:
-                        self.comboBox.removeItem(n)
-                        db_sess.delete(i)
-                        db_sess.commit()
+                for i in pupils:
+                    db_sess.delete(i)
+                    db_sess.commit()
+                works = db_sess.query(Work).filter(Work.form == form.id).all()
+                for i in works:
+                    db_sess.delete(i)
+                    db_sess.commit()
+                journal = db_sess.query(Journal).filter(Journal.pupil_form > form.id).all()
+                for i in journal:
+                    i.pupil_form -= 1
+                    db_sess.commit()
+                pupils = db_sess.query(Pupil).filter(Pupil.form > form.id).all()
+                for i in pupils:
+                    i.form -= 1
+                    db_sess.commit()
+                works = db_sess.query(Work).filter(Work.form == form.id).all()
+                for i in works:
+                    i.form -= 1
+                    db_sess.commit()
                 n = form.id - 1
                 self.comboBox_3.removeItem(n)
                 db_sess.delete(form)
@@ -398,6 +429,13 @@ class MainForm(QMainWindow):
         name, ok_pressed = QInputDialog.getText(self, "Добавить ученика",
                                                  "Введите ФИО ученика")
         if ok_pressed:
+            print(name)
+            if not all(x.isalpha() or x.isspace() for x in name):
+                mistake(f'Неверно написано имя ученика')
+                return
+            if len(name.split()) < 2:
+                mistake('У ученика должны быть имя и фамилия')
+                return
             classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first()
             person = Pupil(
                 full_name=name,
@@ -420,16 +458,12 @@ class MainForm(QMainWindow):
         self.main_table()
 
     def del_person(self):
-        name, ok_pressed = QInputDialog.getText(self, "Удалить ученика", "Введите имя ученика")
+        name, ok_pressed = QInputDialog.getText(self, "Удалить ученика", "Введите ФИО ученика")
         if ok_pressed:
+            classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first()
             person = db_sess.query(Pupil).filter(Pupil.full_name == name).first()
             if not person:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
-                msg.setText("Error")
-                msg.setInformativeText('Такого ученика не существует')
-                msg.setWindowTitle("Error")
-                msg.exec_()
+                mistake('Такого ученика не существует')
                 return
             works = db_sess.query(Journal).filter(Journal.full_name == person.id).all()
             for i in works:
@@ -439,8 +473,12 @@ class MainForm(QMainWindow):
             self.comboBox.removeItem(n)
             db_sess.delete(person)
             db_sess.commit()
-        update_journal()
+            works = db_sess.query(Journal).filter(Journal.full_name > person.id, Journal.pupil_form == classes.id).all()
+            for i in works:
+                i.full_name -= 1
+                db_sess.commit()
         update_pupils()
+        update_journal()
         self.main_table()
 
     def open_table(self):
@@ -453,7 +491,7 @@ class MainForm(QMainWindow):
         self.form1.show()
 
     def create_table(self):
-        self.form1 = NewTable('Создание таблицы')
+        self.form1 = NewTable('Создание таблицы с результатами')
         self.form1.show()
         self.main_table()
 
@@ -467,6 +505,21 @@ class MainForm(QMainWindow):
         self.form1.progress.hide()
         self.form1.save_table()
         self.main_table()
+
+    def change(self):
+        cl = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first().id
+        spisok = db_sess.query(Work).filter(cl == Work.form).all()
+        spisok = [i.title for i in spisok]
+        name, ok_pressed = QInputDialog.getItem(
+            self, "Выберите таблицу", "Какую таблицу экспортировать?",
+            spisok, 1, False)
+        if ok_pressed:
+            self.form1 = NewTable('Изменение результатов работы')
+            self.form1.pushButton_3.hide()
+            self.form1.change_work(name)
+            self.form1.show()
+            update_journal()
+
 
     def main_table(self):
         classes = db_sess.query(Class).filter(Class.form == self.comboBox_3.currentText()).first()
@@ -492,6 +545,7 @@ class MainForm(QMainWindow):
                     continue
                 work_id = db_sess.query(Work).filter(Work.title == title).first().id
                 pupil_id = db_sess.query(Pupil).filter(Pupil.full_name == name).first().id
+                print(title, name)
                 mark = db_sess.query(Journal).filter(Journal.task_name == work_id, Journal.full_name == pupil_id).first().mark
                 if mark == -1:
                     self.tableWidget.setItem(i, j, QTableWidgetItem('н'))
@@ -616,9 +670,11 @@ class AddTable(QWidget):
 
 class NewTable(QDialog):
     def __init__(self, *args):
+        self.work, self.journal_work = list(), list()
         super().__init__()
         uic.loadUi('for_table.ui', self)
         self.setWindowTitle(args[0])
+        self.changing = False
         self.show_table_flag = False
         self.file_name = ''
         self.key = ''
@@ -627,6 +683,39 @@ class NewTable(QDialog):
         self.pushButton_2.clicked.connect(self.close)
         self.pushButton_4.clicked.connect(self.calculate_grade)
         self.pushButton_5.clicked.connect(self.add_work)
+
+    def change_work(self, name):
+        self.changing = True
+        classes = db_sess.query(Class).filter(Class.form == form.comboBox_3.currentText()).first()
+        work = db_sess.query(Work).filter(Work.title == name, Work.form == classes.id).first()
+        self.file_name = work.file_name
+        self.key = work.key
+        journal_work = db_sess.query(Journal).filter(Journal.pupil_form == classes.id, Journal.task_name == work.id).all()
+        self.row = 3 + len(journal_work[0].score_for_task.split(';'))
+        self.header = ['ФИО', 'Оценка', 'Вариант']
+        self.header += [f'Задание {i + 1}' for i in range(len(journal_work[0].score_for_task.split(';')))]
+        self.tableWidget.setColumnCount(self.row)
+        self.tableWidget.setRowCount(0)
+        self.tableWidget.setHorizontalHeaderLabels(self.header)
+        self.lineEdit_4.setText(str(journal_work[0].max_score))
+        self.lineEdit.setText(work.title)
+        self.lineEdit_2.setText(str(journal_work[0].version))
+        self.lineEdit_3.setText(str(len(journal_work[0].score_for_task.split(';'))))
+        self.var = 1
+        print(journal_work)
+        for i, row in enumerate(journal_work):
+            self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
+            name = db_sess.query(Pupil).filter(Pupil.id == row.full_name, Pupil.form == classes.id).first().full_name
+            self.tableWidget.setItem(i, 0, QTableWidgetItem(name))
+            mark = row.mark
+            self.tableWidget.setItem(i, 1, QTableWidgetItem(str(mark)))
+            variant = row.version
+            self.tableWidget.setItem(i, 2, QTableWidgetItem(str(variant)))
+            scores = row.score_for_task.split(';')
+            for j in range(len(scores)):
+                self.tableWidget.setItem(i, j + 3, QTableWidgetItem(str(scores[j])))
+        self.work = work
+        self.journal_work = journal_work
 
     def add_work(self):
         file = QFileDialog.getOpenFileName(self, 'Выберите Файл с работой', '', "Text files (*.txt);;Word files (*.docx)")
@@ -689,7 +778,11 @@ class NewTable(QDialog):
             n = 0
             start = 3 if self.var else 2
             for j in range(start, self.tableWidget.columnCount()):
-                n += int(self.tableWidget.item(i, j).text())
+                try:
+                    n += int(self.tableWidget.item(i, j).text())
+                except Exception:
+                    mistake(f'Неверно заполнена таблица')
+                    return
             if n > grade * 0.85:
                 self.tableWidget.setItem(i, 1, QTableWidgetItem(str(5)))
             elif n > grade * 0.65:
@@ -700,6 +793,14 @@ class NewTable(QDialog):
                 self.tableWidget.setItem(i, 1, QTableWidgetItem(str(2)))
 
     def save_table(self):
+        if self.changing:
+            print(self.journal_work)
+            for i in self.journal_work:
+                db_sess.delete(i)
+                db_sess.commit()
+            db_sess.delete(self.work)
+            db_sess.commit()
+            self.show_table_flag = True
         if not self.show_table_flag:
             self.progress.setText('Ошибка: ошибка в заполнении таблицы')
             self.progress.setStyleSheet('color: red')
@@ -718,11 +819,22 @@ class NewTable(QDialog):
         for i in range(self.tableWidget.rowCount()):
             line = []
             for j in range(len(self.header)):
-                line.append(self.tableWidget.item(i, j).text())
+                try:
+                    line.append(self.tableWidget.item(i, j).text())
+                except Exception:
+                    mistake(f'Неверно заполнена таблица', work)
+                    return
             name = line[self.header.index('ФИО')]
             mark = line[self.header.index("Оценка")]
+            mark = -1 if mark == 'н' else mark
             variant = line[self.header.index('Вариант')] if 'Вариант' in self.header else 1
             scores = line[self.header.index('Вариант') + 1:] if 'Вариант' in self.header else line[self.header.index("Оценка") + 1:]
+            scores = ''.join(i for i in scores)
+            if not scores.isdigit():
+                db_sess.delete(work)
+                db_sess.commit()
+                mistake(f'Неверно заполнена таблица')
+                return
             scores = ';'.join(_ for _ in scores)
             task_name = db_sess.query(Work).filter(Work.form == classes.id, Work.title == work_title).first().id
             classes = db_sess.query(Class).filter(Class.form == form.comboBox_3.currentText()).first()
@@ -730,13 +842,7 @@ class NewTable(QDialog):
             if not name:
                 db_sess.delete(work)
                 db_sess.commit()
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
-                msg.setText("Error")
-                msg.setInformativeText(f'Неверно написано имя: {name}')
-                msg.setWindowTitle("Error")
-                msg.exec_()
-                self.hide()
+                mistake(f'Неверно написано имя: {name}')
                 return
             pupil = Journal(
                 full_name=name.id,
@@ -755,6 +861,8 @@ class NewTable(QDialog):
 
     def close(self):
         self.hide()
+        if self.changing:
+            self.save_table()
 
 
 def except_hook(cls, exception, traceback):
